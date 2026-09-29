@@ -1,56 +1,53 @@
-import torch 
+import torch
 import torch.nn as nn
 
+
 class CNN_model(nn.Module):
+
     def __init__(self):
         super().__init__()
-        # define the layers of the CNN model
-        # convolutional layer 1
-        self.conv1=nn.Conv2d(
-            in_channels=3,out_channels=16,kernel_size=3
+
+        self.features = nn.Sequential(
+
+            # Block 1
+            nn.Conv2d(3, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
+
+            # Block 2
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
+
+            # Block 3
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
+
+            # Block 4
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
         )
-        # convolutional layer 2 
-        self.conv2=nn.Conv2d(
-            in_channels=16,out_channels=32,kernel_size=3
-        )
-        #convolutional layer 3
-        self.conv3=nn.Conv2d(
-            in_channels=32,out_channels=64,kernel_size=3
-        )
-        #activation function
-        self.relu=nn.ReLU()
 
-        #pooling layer
-        self.pool=nn.MaxPool2d(
-            kernel_size=2,stride=2
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Dropout(0.3),
+            nn.Linear(256, 2)
         )
 
-        #classifier layer
-        self.fc=nn.Linear(
-            in_features=64 * 26 * 26,out_features=2
-        )
+    def forward(self, x):
 
-        #dropout layer
-        self.dropout=nn.Dropout(0.3)
+        x = self.features(x)
 
-    def forward(self,x):
-        # pass the input through the layers of the model
-        x=self.conv1(x)
-        x=self.relu(x)
-        x=self.pool(x)
-        x=self.dropout(x)
+        x = self.pool(x)
 
-        x=self.conv2(x)
-        x=self.relu(x)
-        x=self.pool(x)
-        x=self.dropout(x)
+        x = self.classifier(x)
 
-        x=self.conv3(x)
-        x=self.relu(x)
-        x=self.pool(x)
-        x=self.dropout(x)
-
-        x=torch.flatten(x, start_dim=1)
-        x=self.fc(x)
-
-        return(x)
+        return x
