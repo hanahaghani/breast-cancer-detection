@@ -74,9 +74,10 @@ print("Standard Deviation:",std)
 
 train_transform = transforms.Compose([
     transforms.Resize((224, 224)),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(),
-    transforms.RandomRotation(15),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomRotation(10),
+    transforms.RandomResizedCrop(size=224,scale=(0.85,1.0)),
+    transforms.ColorJitter(brightness=0.2,contrast=0.2),
     transforms.ToTensor(),
     transforms.Normalize(mean, std),
 ])
@@ -92,25 +93,6 @@ train_dataset.transform=train_transform
 valid_dataset.transform=transform
 test_dataset.transform=transform
 
-
-class_counts = Counter(train_dataset.targets)
-
-num_class_0 = class_counts[0]
-num_class_1 = class_counts[1]
-
-total = num_class_0 + num_class_1
-
-weight_0 = total / (2 * num_class_0)
-weight_1 = total / (2 * num_class_1)
-
-class_weights = torch.tensor(
-    [weight_0, weight_1],
-    dtype=torch.float32
-)
-
-print("Class counts:", class_counts)
-print("Class weights:", class_weights)
-
 # create dataloaders
 train_loader=DataLoader(train_dataset,batch_size=32,shuffle=True)
 valid_loader=DataLoader(valid_dataset,batch_size=32,shuffle=False)
@@ -121,20 +103,21 @@ torch.manual_seed(42)
 
 model=CNN_model()
 
-n_epochs=20
-criterion=nn.CrossEntropyLoss(weight=class_weights)
-optimizer=torch.optim.Adam(
-    model.parameters(),lr=0.001
+n_epochs=30
+criterion=nn.CrossEntropyLoss()
+optimizer = torch.optim.AdamW(
+    filter(lambda p: p.requires_grad, model.parameters()),
+    lr=1e-4,weight_decay=1e-4
 )
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-    optimizer, mode="min", factor=0.5, patience=2
+    optimizer, mode="min", factor=0.5, patience=3
 )
 # training the model
 train_losses=[]
 valid_losses=[]
 
 best_valid_loss=float('inf')
-patience=3
+patience=7
 counter=0
 
 # training loop
@@ -249,5 +232,5 @@ plot_training_history(train_losses,valid_losses,"/home/pc/Documents/machine lear
 plot_confusion_matrix(all_label,all_prediction,valid_dataset.classes,"/home/pc/Documents/machine learning/breast-cancer-detection/breast-cancer-CNN/img/valid_confusion-matrix.png")
 plot_classification_report( all_label,all_prediction,valid_dataset.classes,"/home/pc/Documents/machine learning/breast-cancer-detection/breast-cancer-CNN/img/valid_classification-report.png")
 
-plot_confusion_matrix(test_all_label,test_all_prediction,valid_dataset.classes,"/home/pc/Documents/machine learning/breast-cancer-detection/breast-cancer-CNN/img/test_confusion-matrix.png")
-plot_classification_report( test_all_label,test_all_prediction,valid_dataset.classes,"/home/pc/Documents/machine learning/breast-cancer-detection/breast-cancer-CNN/img/test_classification-report.png")
+plot_confusion_matrix(test_all_label,test_all_prediction,test_dataset.classes,"/home/pc/Documents/machine learning/breast-cancer-detection/breast-cancer-CNN/img/test_confusion-matrix.png")
+plot_classification_report( test_all_label,test_all_prediction,test_dataset.classes,"/home/pc/Documents/machine learning/breast-cancer-detection/breast-cancer-CNN/img/test_classification-report.png")

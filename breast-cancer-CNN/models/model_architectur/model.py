@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torchvision import models
 
 
 class CNN_model(nn.Module):
@@ -7,47 +8,26 @@ class CNN_model(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.features = nn.Sequential(
-
-            # Block 1
-            nn.Conv2d(3, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-
-            # Block 2
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-
-            # Block 3
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-
-            # Block 4
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
+        self.model = models.resnet18(
+            weights=models.ResNet18_Weights.DEFAULT
         )
 
-        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        # Freeze everything first
+        for param in self.model.parameters():
+            param.requires_grad = False
 
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
+        # Unfreeze layer3 and layer4
+        for param in self.model.layer3.parameters():
+            param.requires_grad = True
+
+        for param in self.model.layer4.parameters():
+            param.requires_grad = True
+
+        # New classifier
+        self.model.fc = nn.Sequential(
             nn.Dropout(0.3),
-            nn.Linear(256, 2)
+            nn.Linear(self.model.fc.in_features, 2)
         )
 
     def forward(self, x):
-
-        x = self.features(x)
-
-        x = self.pool(x)
-
-        x = self.classifier(x)
-
-        return x
+        return self.model(x)
